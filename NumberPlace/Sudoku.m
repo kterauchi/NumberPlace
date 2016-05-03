@@ -43,14 +43,16 @@
 {
 //    // 処理時間計算用
     NSLog(@"\n---Start---");
-    int count = 0;
     
+    int count = 0;
     for (;; count++) {
+        // 条件に従い、全てのマスをランダムに埋める。条件に当てはまらない場所は空欄のままスキップ
         [self allRandomFill];
 
 //        [self show];
 //        printf("\n");
         
+        // NSNullの項目があるか全探索。あった場合、一番完成に近い座標と関連するNSNullの数を返す。
         NSArray *result = [self checkAllCountNull];
         
         // NSNullの個数が0になっていれば、処理を打ち切る。
@@ -58,6 +60,7 @@
             break;
         }
         
+        // 完成していなければ、より完成に近いマスの上下左右を削除
         [self crossDeleteX:[result[0] integerValue] andY:[result[1] integerValue]];
     }
     
@@ -65,88 +68,12 @@
     
     printf("----End----\n");
     NSLog(@"\n計%d回で完成", count);
-    
-//    NSLog(@"\n----End----");
 }
 
 #pragma mark - Private Methods
 /**
- とりあえず全マス埋めるメソッド
- */
-- (void)allFill
-{
-    __block NSInteger num;
-    [self.numBoard enumerateObjectsUsingBlock:^(NSMutableArray*  _Nonnull line, NSUInteger idx, BOOL * _Nonnull stop) {
-        num = arc4random_uniform(MAXNUM) + 1;
-
-        for (int i = 0; i < MAXNUM; i++) {
-            line[i] = [NSNumber numberWithInteger:num];
-            num = ++num > self.numBoard.count ? 1 : num;
-        }
-        
-        self.numBoard[idx] = line;
-    }];
-}
-
-/**
- 全てのマスをランダムで埋めるメソッド
- */
-- (void)_allRandomFill
-{
-    __block NSInteger num;
-    [self.numBoard enumerateObjectsUsingBlock:^(NSMutableArray*  _Nonnull line, NSUInteger idx, BOOL * _Nonnull stop) {
-
-        NSMutableSet *temSet = [NSMutableSet set];
-        for (int i = 0; i < MAXNUM; i++) {
-            
-            do {
-                num = arc4random_uniform(MAXNUM) + 1;
-            } while ([temSet containsObject:[NSNumber numberWithInteger:num]]);
-            
-            [temSet addObject:[NSNumber numberWithInteger:num]];
-            line[i] = [NSNumber numberWithInteger:num];
-            
-        }
-        self.numBoard[idx] = line;
-    }];
-}
-
-/**
- 全てのマスをランダムで埋めるメソッド
- */
-- (void)__allRandomFill
-{
-    __block NSInteger num;
-    [self.numBoard enumerateObjectsUsingBlock:^(NSMutableArray*  _Nonnull line, NSUInteger idx, BOOL * _Nonnull stop) {
-        
-        // スキップ処理
-        if (![line containsObject:[NSNull null]]) {
-            return;
-        }
-        
-        NSMutableSet *temSet = [NSMutableSet setWithArray:line];
-        for (int i = 0; i < MAXNUM; i++) {
-            
-            // スキップ処理
-            if (![line[i] isMemberOfClass:[NSNull class]]) {
-                continue;
-            }
-            
-            do {
-                num = arc4random_uniform(MAXNUM) + 1;
-            } while ([temSet containsObject:[NSNumber numberWithInteger:num]]);
-            
-            [temSet addObject:[NSNumber numberWithInteger:num]];
-            line[i] = [NSNumber numberWithInteger:num];
-            
-        }
-        self.numBoard[idx] = line;
-    }];
-}
-
-/**
  全てのマスを条件に従いランダムで埋めるメソッド。
-条件に適合出来ない場合は、そのマスはスキップする。
+ 条件に適合出来ない場合は、そのマスはスキップする。
  */
 - (void)allRandomFill
 {
@@ -179,7 +106,6 @@
                 }
 
                 [temSet addObject:[NSNumber numberWithInteger:num]];
-//                line[idxX] = [NSNumber numberWithInteger:num];
             }
         }];
 
@@ -212,42 +138,9 @@
 
 #pragma mark 全探索メソッド
 /**
- 全マスに対し、破綻が起きていないかチェックをするメソッド
- */
-- (void)_checkAll
-{
-    // 二次元配列の初期化
-    __block NSMutableArray *flag = [@[] mutableCopy];
-    for (int i = 0; i < MAXNUM/3; i++) {
-        flag[i] = [@[] mutableCopy];
-    }
-    
-    // 各ゾーンで破綻していないか事前チェック // 全探索の省略
-    for (int y = 0; y < MAXNUM/3; y++) {
-        for (int x = 0; x < MAXNUM/3; x++) {
-            flag[y][x] = [NSNumber numberWithBool:[self checkBoxIndexX:x andY:y]];
-        }
-    }
-    
-    // 判定開始。破綻は最大2。そのため、事前にゾーンチェックをし、該当した場合のみ、行チェックを行う。
-    [self.numBoard enumerateObjectsUsingBlock:^(NSMutableArray* _Nonnull line, NSUInteger idxY, BOOL * _Nonnull stop) {
-        [line enumerateObjectsUsingBlock:^(NSNumber*  _Nonnull num, NSUInteger idxX, BOOL * _Nonnull stop) {
-            // 自身のゾーンが破綻していなければスキップ
-            if (flag[idxY/3][idxX/3]) {
-                return;
-            }
-            
-            [self checkColumn:idxX];
-            NSLog(@"破綻がないマスはX:%ld Y:%ld\n", idxX, idxY);
-        }];
-    }];
-}
-
-/**
  全マスに対し、行、列、3x3の範囲に何こNSNullがあるかを求め、最小のマス(より完成しているマス)の座標とNSNullの個数を返す
  @return NSArray[3] X軸, Y軸, NSNullの数。 全てのマスでNSNullがなければ、全て0を返す。
  */
-// タプル使いたい…
 -(NSArray*)checkAllCountNull
 {
     // 適当な値で初期化
@@ -304,7 +197,7 @@
         }];
     }];
     
-    // 巨大な値を返すとバグの原因になる為、全て0に置き換え。
+    // NSNullが存在しなかった場合。巨大な値を返すとバグの原因になる為、全て0に置き換え。
     if (minFailCount == NSIntegerMax) {
         posX = 0;
         posY = 0;
@@ -314,141 +207,6 @@
     NSArray *result = [NSArray arrayWithObjects:[NSNumber numberWithInteger:posX], [NSNumber numberWithInteger:posY], [NSNumber numberWithInteger:minFailCount], nil];
     
     return result;
-}
-
-#pragma mark 破綻判定ロジック
-/**
- 3x3マスのチェック(3x3で区切られたZoneIndexを入力)
- @param idxX ゾーンのX軸方向のindex
- @param idxY ゾーンのY軸方向のindex
- @return チェック結果が問題なかった時YESを返す
- */
-- (BOOL)checkBoxIndexX:(NSInteger)idxX andY:(NSInteger)idxY
-{
-    NSMutableSet *delOverlapNumSet = [NSMutableSet set];
-    
-    for (int y = 0; y < 3; y++) {
-        for (int x = 0; x < 3; x++) {
-            [delOverlapNumSet addObject:self.numBoard[idxY*3 + y][idxX*3 + x]];
-        }
-    }
-    
-    NSLog(@"X:%ld Y:%ld 合計:%lu", idxX, idxY, delOverlapNumSet.count);
-    
-    if (delOverlapNumSet.count == 9) {
-        return YES;
-    }else{
-        return NO;
-    }
-}
-
-/**
- 3x3マスのチェック(座標を直接入力)
- @param x X軸方向の座標
- @param y Y軸方向の座標
- @return チェック結果が問題なかった時YESを返す
- */
-- (BOOL)checkBoxAtX:(NSInteger)x andY:(NSInteger)y
-{
-    NSInteger zoneIdxX = (NSInteger)x/3;
-    NSInteger zoneIdxY = (NSInteger)y/3;
-    
-    return [self checkBoxIndexX:zoneIdxX andY:zoneIdxY];
-}
-
-/**
- 列チェック // 値入力の段階で重複しない数を入れているので、事実上使われない。
- @return チェック結果が問題なかった時YESを返す
- */
-- (BOOL)checkRow
-{
-    
-    return YES;
-}
-
-/**
- 行チェック
- @param x チェックする行のX座標を受け取る
- @return チェック結果が問題なかった時YESを返す
- */
-- (BOOL)checkColumn:(NSInteger)x
-{
-    NSMutableSet *delOverlapNumSet = [NSMutableSet set];
-
-    for (int y = 0; y < MAXNUM; y++) {
-        [delOverlapNumSet addObject:self.numBoard[y][x]];
-    }
-    
-//    NSLog(@"\n%ld行チェック 合計:%lu", x, delOverlapNumSet.count);
-    if (delOverlapNumSet.count == MAXNUM) {
-        return YES;
-    }else{
-        return NO;
-    }
-}
-
-#pragma mark 指定した文字が含まれているか
-/**
- 3x3マス:
- 3x3マスに指定した座標と同じ値があるかをチェックするメソッド
- @param x X軸方向の座標
- @param y Y軸方向の座標
- @return 同一な値があればYESを返す
- */
-- (BOOL)_checkBoxSameNumAtX:(NSInteger)x andY:(NSInteger)y
-{
-    NSInteger zoneIdxX = (NSInteger)x/3;
-    NSInteger zoneIdxY = (NSInteger)y/3;
-    
-    NSMutableArray *inZoneNum = [@[] mutableCopy];
-    
-    for (int addY = 0; addY < 3; addY++) {
-        for (int addX = 0; addX < 3; addX++) {
-            // 自身は除く
-            if (!(zoneIdxY*3 + addY == y && zoneIdxX*3 + addX == x)) {
-                [inZoneNum addObject:self.numBoard[zoneIdxY*3 + addY][zoneIdxX*3 + addX]];
-            }
-        }
-    }
-    
-    if ([self.numBoard[y][x] isMemberOfClass:[NSNull class]]) {
-        return NO;
-    }
-    
-    return [inZoneNum containsObject:self.numBoard[y][x]];
-}
-
-/**
- 列: *未使用のため、未実装*
- 指定した座標の列に自身と同じ値があるかをチェックするメソッド
- @param x X軸方向の座標
- @param y Y軸方向の座標
- @return 同一な値があればYESを返す
- */
-- (BOOL)_checkRowSameNumAtX:(NSInteger)x andY:(NSInteger)y
-{
-    
-    return YES;
-}
-
-/**
- 行:
- 指定した座標の行に自身と同じ値があるかをチェックするメソッド
- @param x X軸方向の座標
- @param y Y軸方向の座標
- @return 同一な値があればYESを返す
- */
-- (BOOL)_checkColumnSameNumAtX:(NSInteger)x andY:(NSInteger)y
-{
-    NSMutableArray *inColumnNum = [@[] mutableCopy];
-    
-    for (int row = 0; row < MAXNUM; row++) {
-        if (row != y) {
-            [inColumnNum addObject:self.numBoard[row][x]];
-        }
-    }
-    
-    return [inColumnNum containsObject:self.numBoard[y][x]];
 }
 
 #pragma mark 自身と同じ文字が含まれているか
@@ -480,19 +238,6 @@
     }
     
     return [inZoneNum containsObject:self.numBoard[y][x]];
-}
-
-/**
- 列: *未使用のため、未実装*
- 指定した座標の列に自身と同じ値があるかをチェックするメソッド
- @param x X軸方向の座標
- @param y Y軸方向の座標
- @return 同一な値があればYESを返す
- */
-- (BOOL)checkRowSameNumAtX:(NSInteger)x andY:(NSInteger)y
-{
-    
-    return YES;
 }
 
 /**
@@ -538,41 +283,4 @@
     }
 }
 
-#pragma mark - memo
--(void)memo
-{
-//    int nilCount;       // nilカウント
-//    int index[3][9][9]; // 破綻数、座標index
-    
-    /* step0. ルールに則って配列にランダムで数字を入れる */
-    // 1. 横列に同一の数字がないか。
-    //    if 同じ数字があれば現在の値+1を循環しつつ実施。continue。
-    
-    // 2. 縦列に同一の数字がないか。
-    //    if 同じ数字があれば現在の値+1を循環しつつ実施。continue。
-    
-    // 3. 3x3マスで同一の値がないか。
-    //    if (BOOL == YES) 配列に挿入。(BOOL == NO)
-    
-    // 4. BOOLの合計を求める。合計が1であれば、break。それ以外はnilカウントアップ
-    
-    // 5. nilカウントが0であれば、完成。そうでなければnilカウントをリセットして続きへ
-    
-    /* step1. 破綻を検索。破綻があった場合、破綻数1であれば即打ち切り。破綻数2以上であれば、破綻数と座標を確保 */
-    /* 　　　　より破綻数が少ないものが出た場合、座標などを上書き */
-    /* 判定開始 */
-    // 1. 横列に同一の数字がないか。BOOLで返す。
-    
-    // 2. 縦列に同一の数字がないか。BOOLで返す。
-    
-    // 3. 3x3マスで同一の値がないか。BOOLで返す。
-    
-    // 4. 破綻数が1であればbreak。
-    
-    // 4-1. 全ての数字を入れることが出来なかった場合、強引にランダムな数字を入れる。
-    
-    // 4-2. 重複した数字を消す。
-    
-    arc4random_uniform(9);
-}
 @end
