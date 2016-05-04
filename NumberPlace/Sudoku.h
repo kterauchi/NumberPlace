@@ -7,11 +7,12 @@
 
 #import <Foundation/Foundation.h>
 
+/**
+ 数独の解答をランダムに作成するためのクラス
+ */
 @interface Sudoku : NSObject
-@property (nonatomic) NSMutableArray *numBoard;
-
-/*
- 数独問題をランダムに生成
+/**
+ 数独の解答をランダムに生成
  */
 - (void)fire;
 @end
